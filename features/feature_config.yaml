@@ -1,0 +1,39 @@
+# Feature Engineering Configuration
+
+# Missing values handling
+missing_values:
+  strategy: "auto"  # auto, mean, median, mode, forward_fill, drop
+
+# Datetime feature extraction
+datetime:
+  column: null  # null = auto-detect
+  enabled: true
+
+# Categorical encoding
+encoding:
+  method: "auto"  # auto, label, onehot
+  columns: null  # null = auto-detect all categorical
+
+# Outlier detection and handling
+outliers:
+  method: "iqr"  # iqr, zscore
+  columns: null  # null = all numeric columns
+
+# Binning/grouping
+binning:
+  enabled: true
+  n_bins: 5
+  method: "quantile"  # quantile, uniform
+  columns: null  # null = auto-select numeric columns
+
+# Domain-specific features (mall movement tracking)
+domain:
+  zone_column: null  # null = auto-detect
+  user_column: null  # null = auto-detect
+  enabled: true
+
+# Column combining
+combining:
+  enabled: true
+  combinations: null  # null = auto-create, or list of [col1, col2, operation, new_name]
+
