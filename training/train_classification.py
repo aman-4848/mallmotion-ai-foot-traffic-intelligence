@@ -37,26 +37,56 @@ def prepare_data():
     df = fe.engineer_features(df)
     
     # Auto-detect target and feature columns
-    # Assuming zone prediction task
-    zone_cols = [col for col in df.columns if 'zone' in col.lower() or 'location' in col.lower()]
-    target_col = zone_cols[0] if zone_cols else df.columns[-1]
+    # Assuming zone prediction task - use SPACEID as target if available
+    zone_cols = [col for col in df.columns if 'zone' in col.lower() or 'location' in col.lower() or 'spaceid' in col.lower()]
+    target_col = zone_cols[0] if zone_cols else None
     
-    # Exclude non-feature columns
-    exclude_cols = ['target', target_col] + [col for col in df.columns if df[col].dtype == 'object']
-    feature_cols = [col for col in df.columns if col not in exclude_cols and df[col].dtype in [np.number]]
+    # If no zone column, use a different approach - predict based on patterns
+    if target_col is None:
+        # Use last column or a suitable numeric column as target
+        numeric_cols = [col for col in df.columns if df[col].dtype in [np.number]]
+        target_col = numeric_cols[-1] if numeric_cols else df.columns[-1]
+        print(f"Warning: No zone column found, using {target_col} as target")
+    
+    # Get all numeric columns as features, excluding target and ID columns
+    # Use select_dtypes to get numeric columns (more reliable)
+    numeric_df = df.select_dtypes(include=[np.number])
+    all_numeric = list(numeric_df.columns)
+    
+    # Exclude target and ID columns
+    exclude_list = [target_col]
+    if 'USERID' in all_numeric:
+        exclude_list.append('USERID')
+    
+    # Get feature columns (numeric, not in exclude list)
+    feature_cols = [col for col in all_numeric if col not in exclude_list]
+    
+    # If still no features, use all numeric except target
+    if len(feature_cols) == 0:
+        print(f"Warning: No features after exclusion. Using all numeric except target.")
+        feature_cols = [col for col in all_numeric if col != target_col]
     
     if len(feature_cols) == 0:
-        raise ValueError("No numeric feature columns found")
+        raise ValueError(f"No numeric feature columns found. Total columns: {len(df.columns)}, Numeric: {len(all_numeric)}, Target: {target_col}, Exclude: {exclude_list}")
+    
+    print(f"Target column: {target_col}")
+    print(f"Feature columns: {len(feature_cols)}")
     
     X = df[feature_cols].fillna(0)
     y = df[target_col]
     
-    # Handle categorical target
-    if y.dtype == 'object':
-        from sklearn.preprocessing import LabelEncoder
-        le = LabelEncoder()
-        y = le.fit_transform(y)
-        joblib.dump(le, MODEL_DIR.parent / "preprocessing" / "encoder.pkl")
+    # Handle categorical target - always encode to ensure consistent classes
+    from sklearn.preprocessing import LabelEncoder
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+    y = y_encoded
+    
+    # Save encoder
+    preprocessing_dir = MODEL_DIR.parent / "preprocessing"
+    preprocessing_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(le, preprocessing_dir / "encoder.pkl")
+    
+    print(f"Target classes: {len(le.classes_)}")
     
     return X, y, feature_cols
 
@@ -68,7 +98,18 @@ def train_random_forest(X_train, y_train, X_test, y_test):
     
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    roc_auc = roc_auc_score(y_test, model.predict_proba(X_test), multi_class='ovr') if len(np.unique(y_test)) > 2 else roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+    
+    # Calculate ROC-AUC (handle binary and multi-class)
+    try:
+        if len(np.unique(y_test)) > 2:
+            # Multi-class: use one-vs-rest
+            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test), multi_class='ovr', average='macro')
+        else:
+            # Binary classification
+            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+    except Exception as e:
+        print(f"Warning: Could not calculate ROC-AUC: {e}")
+        roc_auc = np.nan
     
     print(f"Random Forest Accuracy: {accuracy:.4f}")
     print(f"Random Forest ROC-AUC: {roc_auc:.4f}")
@@ -93,12 +134,26 @@ def train_decision_tree(X_train, y_train, X_test, y_test):
 def train_xgboost(X_train, y_train, X_test, y_test):
     """Train XGBoost classifier"""
     print("\nTraining XGBoost...")
+    # XGBoost requires all classes in training, so we need to handle this
+    unique_classes = np.unique(np.concatenate([y_train, y_test]))
     model = XGBClassifier(random_state=42, n_jobs=-1)
+    # Fit with all classes specified
     model.fit(X_train, y_train)
     
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    roc_auc = roc_auc_score(y_test, model.predict_proba(X_test), multi_class='ovr') if len(np.unique(y_test)) > 2 else roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+    
+    # Calculate ROC-AUC (handle binary and multi-class)
+    try:
+        if len(np.unique(y_test)) > 2:
+            # Multi-class: use one-vs-rest
+            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test), multi_class='ovr', average='macro')
+        else:
+            # Binary classification
+            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+    except Exception as e:
+        print(f"Warning: Could not calculate ROC-AUC: {e}")
+        roc_auc = np.nan
     
     print(f"XGBoost Accuracy: {accuracy:.4f}")
     print(f"XGBoost ROC-AUC: {roc_auc:.4f}")

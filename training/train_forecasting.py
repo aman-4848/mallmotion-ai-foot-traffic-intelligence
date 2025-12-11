@@ -28,17 +28,23 @@ def prepare_data():
     df = load_processed_data()
     
     # Auto-detect datetime and value columns
-    datetime_cols = df.select_dtypes(include=['datetime64']).columns
+    datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+    
+    # Try to convert common date column names
     if len(datetime_cols) == 0:
-        # Try to convert common date column names
-        for col in ['date', 'timestamp', 'time', 'datetime']:
+        for col in ['TIMESTAMP', 'timestamp', 'date', 'time', 'datetime', 'Date', 'Time']:
             if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-                datetime_cols = [col]
-                break
+                try:
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
+                    if df[col].dtype == 'datetime64[ns]':
+                        datetime_cols = [col]
+                        break
+                except:
+                    pass
     
     if len(datetime_cols) == 0:
-        raise ValueError("No datetime column found. Please ensure data has a date/timestamp column.")
+        print("Warning: No datetime column found. Forecasting models may not work properly.")
+        return None
     
     datetime_col = datetime_cols[0]
     

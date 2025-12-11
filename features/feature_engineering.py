@@ -103,28 +103,41 @@ class FeatureEngineer:
         
         for col in df.columns:
             if df[col].isnull().sum() > 0:
+                # Skip if all values are NaN
+                if df[col].isnull().sum() == len(df):
+                    if df[col].dtype in [np.int64, np.float64]:
+                        df[col] = df[col].fillna(0)
+                    else:
+                        df[col] = df[col].fillna('unknown')
+                    continue
+                
                 if strategy == 'auto':
                     if df[col].dtype in [np.int64, np.float64]:
                         # Numeric: use median
                         imputer = SimpleImputer(strategy='median')
-                        df[[col]] = imputer.fit_transform(df[[col]])
+                        imputed_values = imputer.fit_transform(df[[col]])
+                        df[col] = imputed_values.flatten()
                         self.imputers[col] = imputer
                     else:
                         # Categorical: use mode
                         imputer = SimpleImputer(strategy='most_frequent')
-                        df[[col]] = imputer.fit_transform(df[[col]])
+                        imputed_values = imputer.fit_transform(df[[col]])
+                        df[col] = imputed_values.flatten()
                         self.imputers[col] = imputer
                 elif strategy == 'mean' and df[col].dtype in [np.int64, np.float64]:
                     imputer = SimpleImputer(strategy='mean')
-                    df[[col]] = imputer.fit_transform(df[[col]])
+                    imputed_values = imputer.fit_transform(df[[col]])
+                    df[col] = imputed_values.flatten()
                     self.imputers[col] = imputer
                 elif strategy == 'median' and df[col].dtype in [np.int64, np.float64]:
                     imputer = SimpleImputer(strategy='median')
-                    df[[col]] = imputer.fit_transform(df[[col]])
+                    imputed_values = imputer.fit_transform(df[[col]])
+                    df[col] = imputed_values.flatten()
                     self.imputers[col] = imputer
                 elif strategy == 'mode':
                     imputer = SimpleImputer(strategy='most_frequent')
-                    df[[col]] = imputer.fit_transform(df[[col]])
+                    imputed_values = imputer.fit_transform(df[[col]])
+                    df[col] = imputed_values.flatten()
                     self.imputers[col] = imputer
                 elif strategy == 'forward_fill':
                     df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
@@ -304,11 +317,29 @@ class FeatureEngineer:
                 continue
             
             if method == 'quantile':
-                df[col + '_binned'] = pd.qcut(df[col], q=n_bins, duplicates='drop', labels=False)
-                self.bin_edges[col] = pd.qcut(df[col], q=n_bins, duplicates='drop').categories
+                try:
+                    binned = pd.qcut(df[col], q=n_bins, duplicates='drop', labels=False)
+                    df[col + '_binned'] = binned
+                    # Store bin edges
+                    bin_result = pd.qcut(df[col], q=n_bins, duplicates='drop')
+                    if hasattr(bin_result, 'cat'):
+                        self.bin_edges[col] = bin_result.cat.categories
+                    else:
+                        self.bin_edges[col] = bin_result
+                except Exception as e:
+                    print(f"    Warning: Could not bin {col}: {e}")
             elif method == 'uniform':
-                df[col + '_binned'] = pd.cut(df[col], bins=n_bins, duplicates='drop', labels=False)
-                self.bin_edges[col] = pd.cut(df[col], bins=n_bins, duplicates='drop').categories
+                try:
+                    binned = pd.cut(df[col], bins=n_bins, duplicates='drop', labels=False)
+                    df[col + '_binned'] = binned
+                    # Store bin edges
+                    bin_result = pd.cut(df[col], bins=n_bins, duplicates='drop')
+                    if hasattr(bin_result, 'cat'):
+                        self.bin_edges[col] = bin_result.cat.categories
+                    else:
+                        self.bin_edges[col] = bin_result
+                except Exception as e:
+                    print(f"    Warning: Could not bin {col}: {e}")
         
         return df
     

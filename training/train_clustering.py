@@ -34,11 +34,16 @@ def prepare_data(n_clusters=5):
     fe = FeatureEngineer()
     df = fe.engineer_features(df)
     
-    # Select numeric features only
-    feature_cols = [col for col in df.columns if df[col].dtype in [np.number]]
+    # Select numeric features only (use select_dtypes for reliability)
+    numeric_df = df.select_dtypes(include=[np.number])
+    feature_cols = list(numeric_df.columns)
+    
+    # Exclude ID columns
+    if 'USERID' in feature_cols:
+        feature_cols.remove('USERID')
     
     if len(feature_cols) == 0:
-        raise ValueError("No numeric feature columns found")
+        raise ValueError(f"No numeric feature columns found. Total columns: {len(df.columns)}, Numeric: {len(numeric_df.columns)}")
     
     X = df[feature_cols].fillna(0)
     
