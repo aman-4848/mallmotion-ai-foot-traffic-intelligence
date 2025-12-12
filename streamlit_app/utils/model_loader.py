@@ -11,20 +11,22 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
-def load_classification_model(model_name='xgboost'):
+def load_classification_model(model_name='xgboost', return_scaler=False):
     """
     Load classification model
     
     Args:
-        model_name: 'xgboost', 'random_forest', or 'decision_tree'
+        model_name: 'xgboost', 'random_forest', 'decision_tree', or 'logistic_regression'
+        return_scaler: If True, also return the scaler (for Logistic Regression)
     
     Returns:
-        Trained model
+        Trained model (and scaler if return_scaler=True)
     """
     model_files = {
         'xgboost': 'classification/zone_xgb.pkl',
         'random_forest': 'classification/zone_rf.pkl',
-        'decision_tree': 'classification/baseline_dt.pkl'
+        'decision_tree': 'classification/baseline_dt.pkl',
+        'logistic_regression': 'classification/zone_lr.pkl'
     }
     
     model_path = MODELS_DIR / model_files.get(model_name.lower(), model_files['xgboost'])
@@ -32,7 +34,18 @@ def load_classification_model(model_name='xgboost'):
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
     
-    return joblib.load(model_path)
+    model = joblib.load(model_path)
+    
+    # Load scaler for Logistic Regression if requested
+    if return_scaler and model_name.lower() == 'logistic_regression':
+        scaler_path = MODELS_DIR / 'preprocessing' / 'lr_scaler.pkl'
+        if scaler_path.exists():
+            scaler = joblib.load(scaler_path)
+            return model, scaler
+        else:
+            return model, None
+    
+    return model
 
 def load_clustering_model(model_name='kmeans'):
     """
@@ -56,22 +69,23 @@ def load_clustering_model(model_name='kmeans'):
     
     return joblib.load(model_path)
 
-def load_forecasting_model(model_name='prophet'):
+def load_forecasting_model(model_name='random_forest_regressor'):
     """
     Load forecasting model
     
     Args:
-        model_name: 'prophet' or 'arima'
+        model_name: 'random_forest_regressor' or 'arima'
     
     Returns:
         Trained model
     """
     model_files = {
-        'prophet': 'forecasting/prophet_model.pkl',
+        'random_forest_regressor': 'forecasting/rf_forecast.pkl',
+        'rf_forecast': 'forecasting/rf_forecast.pkl',
         'arima': 'forecasting/arima.pkl'
     }
     
-    model_path = MODELS_DIR / model_files.get(model_name.lower(), model_files['prophet'])
+    model_path = MODELS_DIR / model_files.get(model_name.lower(), model_files['random_forest_regressor'])
     
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -90,7 +104,9 @@ def load_preprocessor(preprocessor_name='encoder'):
     """
     preprocessor_files = {
         'encoder': 'preprocessing/encoder.pkl',
-        'scaler': 'preprocessing/scaler.pkl'
+        'scaler': 'preprocessing/scaler.pkl',
+        'forecast_scaler': 'preprocessing/forecast_scaler.pkl',
+        'forecast_features': 'preprocessing/forecast_features.pkl'
     }
     
     preprocessor_path = MODELS_DIR / preprocessor_files.get(preprocessor_name.lower(), preprocessor_files['encoder'])

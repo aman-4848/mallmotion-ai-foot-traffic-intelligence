@@ -128,7 +128,7 @@ with col2:
 with col3:
     st.subheader("📈 Forecasting")
     st.info("✅ 1 Model Trained")
-    st.write("• Prophet")
+    st.write("• Random Forest Regressor")
     st.caption("ARIMA requires statsmodels")
 
 st.markdown("---")

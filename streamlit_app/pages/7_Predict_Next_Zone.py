@@ -20,23 +20,35 @@ models_dir = Path(__file__).parent.parent.parent / "models"
 st.header("🤖 Select Model")
 model_choice = st.selectbox(
     "Choose classification model:",
-    ["XGBoost (Best)", "Random Forest", "Decision Tree", "SVM"]
+    ["XGBoost (Best)", "Random Forest", "Decision Tree", "Logistic Regression"]
 )
 # Map selection to file
 model_files = {
     "XGBoost (Best)": "zone_xgb.pkl",
     "Random Forest": "zone_rf.pkl",
     "Decision Tree": "baseline_dt.pkl",
-    "SVM": "zone_svm.pkl"
+    "Logistic Regression": "zone_lr.pkl"
 }
 model_path = models_dir / "classification" / model_files[model_choice]
 if not model_path.exists():
     st.error(f"Model file not found: {model_path}")
     st.stop()
-# Load model
+# Load model and scaler (if needed for Logistic Regression)
 try:
     model = joblib.load(model_path)
-    st.success(f"✅ {model_choice} model loaded successfully!")
+    
+    # Load scaler for Logistic Regression
+    scaler = None
+    if 'Logistic Regression' in model_choice:
+        scaler_path = models_dir.parent / "preprocessing" / "lr_scaler.pkl"
+        if scaler_path.exists():
+            scaler = joblib.load(scaler_path)
+            st.success(f"✅ {model_choice} model and scaler loaded successfully!")
+        else:
+            st.warning(f"⚠️ Scaler not found for Logistic Regression. Predictions may be inaccurate.")
+            st.success(f"✅ {model_choice} model loaded successfully!")
+    else:
+        st.success(f"✅ {model_choice} model loaded successfully!")
 except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
@@ -82,12 +94,20 @@ if prediction_mode == "Single Prediction":
         # Predict button
         if st.button("🔮 Predict Next Zone", type="primary"):
             try:
-                # Prepare input
-                feature_values = [input_features.get(f, df[f].mean()) for f in numeric_cols[:len(model.feature_importances_)] if len(model.feature_importances_) <= len(numeric_cols)]
-                # Ensure correct length
-                if len(feature_values) != len(model.feature_importances_):
-                    feature_values = feature_values[:len(model.feature_importances_)]
+                # Prepare input - get all feature values
+                feature_values = [input_features.get(f, df[f].mean()) for f in numeric_cols]
+                
+                # For tree-based models, check feature count
+                if hasattr(model, 'feature_importances_'):
+                    if len(feature_values) != len(model.feature_importances_):
+                        feature_values = feature_values[:len(model.feature_importances_)]
+                
                 X_input = np.array([feature_values])
+                
+                # Scale features if Logistic Regression
+                if scaler is not None:
+                    X_input = scaler.transform(X_input)
+                
                 # Make prediction
                 prediction = model.predict(X_input)[0]
                 probabilities = model.predict_proba(X_input)[0] if hasattr(model, 'predict_proba') else None
@@ -126,6 +146,11 @@ else:
                     if 'USERID' in numeric_cols:
                         numeric_cols.remove('USERID')
                     X = df_processed[numeric_cols].fillna(0)
+                    
+                    # Scale features if Logistic Regression
+                    if scaler is not None:
+                        X = scaler.transform(X)
+                    
                     # Predict
                     predictions = model.predict(X)
                     # Add predictions to dataframe
@@ -150,8 +175,8 @@ if 'XGBoost' in model_choice:
     model_type = 'Gradient Boosting'
 elif 'Random' in model_choice:
     model_type = 'Ensemble'
-elif 'SVM' in model_choice:
-    model_type = 'Support Vector Machine'
+elif 'Logistic Regression' in model_choice:
+    model_type = 'Logistic Regression'
 else:
     model_type = 'Decision Tree'
 

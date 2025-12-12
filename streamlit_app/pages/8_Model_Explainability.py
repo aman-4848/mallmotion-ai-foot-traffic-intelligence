@@ -21,18 +21,26 @@ st.title("🧠 Model Explainability")
 st.markdown("---")
 models_dir = Path(__file__).parent.parent.parent / "models"
 st.header("🔍 Feature Importance Analysis")
-model_choice = st.selectbox("Select model:", ["XGBoost", "Random Forest", "Decision Tree", "SVM"])
+model_choice = st.selectbox("Select model:", ["XGBoost", "Random Forest", "Decision Tree", "Logistic Regression"])
 # Map to file
 model_files = {
     "XGBoost": "zone_xgb.pkl",
     "Random Forest": "zone_rf.pkl",
     "Decision Tree": "baseline_dt.pkl",
-    "SVM": "zone_svm.pkl"
+    "Logistic Regression": "zone_lr.pkl"
 }
 model_path = models_dir / "classification" / model_files[model_choice]
 if model_path.exists():
     try:
         model = joblib.load(model_path)
+        
+        # Load scaler for Logistic Regression
+        scaler = None
+        if model_choice == "Logistic Regression":
+            scaler_path = models_dir.parent / "preprocessing" / "lr_scaler.pkl"
+            if scaler_path.exists():
+                scaler = joblib.load(scaler_path)
+        
         # Load data for feature names
         df = load_processed_data()
         fe = FeatureEngineer()
@@ -47,6 +55,12 @@ if model_path.exists():
         
         # Prepare data for importance calculation
         X = df[numeric_cols].fillna(0)
+        
+        # Scale features if Logistic Regression
+        if scaler is not None:
+            X_scaled = scaler.transform(X)
+        else:
+            X_scaled = X
         
         # Get target for permutation importance
         target_col = 'SPACEID' if 'SPACEID' in df.columns else None
@@ -65,6 +79,12 @@ if model_path.exists():
             X_sample = X.sample(min(5000, len(X)), random_state=42) if len(X) > 5000 else X
             y_sample = y_encoded[X_sample.index] if len(X) > 5000 else y_encoded
             
+            # Scale sample if Logistic Regression
+            if scaler is not None:
+                X_sample_scaled = scaler.transform(X_sample)
+            else:
+                X_sample_scaled = X_sample.values
+            
             # Get feature importance based on model type
             if hasattr(model, 'feature_importances_'):
                 # Tree-based models: use built-in feature importance
@@ -72,11 +92,11 @@ if model_path.exists():
                 feature_names = numeric_cols[:n_features] if len(numeric_cols) >= n_features else numeric_cols
                 importances = model.feature_importances_[:len(feature_names)]
                 importance_type = "Built-in Feature Importance"
-            elif model_choice == "SVM":
-                # SVM: Use permutation importance
-                with st.spinner("Calculating permutation importance for SVM (this may take a moment)..."):
+            elif model_choice == "Logistic Regression":
+                # Logistic Regression: Use permutation importance (with scaled data)
+                with st.spinner("Calculating permutation importance for Logistic Regression (this may take a moment)..."):
                     perm_importance = permutation_importance(
-                        model, X_sample.values, y_sample, 
+                        model, X_sample_scaled, y_sample, 
                         n_repeats=5, random_state=42, n_jobs=-1, scoring='accuracy'
                     )
                     importances = perm_importance.importances_mean
@@ -106,7 +126,7 @@ if model_path.exists():
             top_features = importance_df.head(top_n)
             
             # Visualization
-            color = 'purple' if model_choice == 'SVM' else 'steelblue'
+            color = 'purple' if model_choice == 'Logistic Regression' else 'steelblue'
             fig, ax = plt.subplots(figsize=(12, 10))
             ax.barh(range(len(top_features)), top_features['Importance'].values, 
                    color=color, alpha=0.8, edgecolor='black')
@@ -153,11 +173,11 @@ st.info("""
 - **XGBoost**: Provides feature importance based on gain
 - **Random Forest**: Uses mean decrease in impurity
 - **Decision Tree**: Most interpretable, can visualize tree structure
-- **SVM**: Uses permutation importance (measures how much model performance decreases when feature is shuffled)
+- **Logistic Regression**: Uses permutation importance (measures how much model performance decreases when feature is shuffled)
 
 **Feature Importance Methods:**
 - **Built-in**: Tree-based models (XGBoost, Random Forest, Decision Tree) have native feature importance
-- **Permutation Importance**: Used for SVM and other models without built-in importance
+- **Permutation Importance**: Used for Logistic Regression and other models without built-in importance
 
 Feature importance helps understand which factors most influence zone predictions.
 """)

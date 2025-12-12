@@ -63,8 +63,7 @@ def create_heatmap(data, title, cmap='viridis', figsize=(12, 8)):
     fig, ax = plt.subplots(figsize=figsize, facecolor=DARK_THEME_COLORS['main_bg'])
     ax.set_facecolor(DARK_THEME_COLORS['card_bg'])
     sns.heatmap(data, cmap=cmap, annot=True, fmt='d', 
-                cbar_kws={'label': 'Count'}, ax=ax,
-                cmap='viridis' if cmap == 'viridis' else cmap)
+                cbar_kws={'label': 'Count'}, ax=ax)
     ax.set_title(title, fontsize=14, fontweight='bold', pad=20, color=DARK_THEME_COLORS['accent_color'])
     plt.tight_layout()
     return fig

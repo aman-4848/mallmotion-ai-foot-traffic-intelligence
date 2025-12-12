@@ -1,0 +1,4 @@
+Model_Type,Best_Model,Metric,Value
+Classification,Xgboost,Accuracy,99.65%
+Clustering,KMEANS,Silhouette Score,0.2575
+Forecasting,PROPHET,RMSE,2.24e+12

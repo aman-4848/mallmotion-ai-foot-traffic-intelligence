@@ -88,6 +88,6 @@ st.header("ℹ️ Forecasting Models")
 st.info("""
 **Forecasting Models:**
 - **ARIMA**: Statistical time series model (requires statsmodels)
-- **Prophet**: Facebook's forecasting tool, handles seasonality well
+- **Random Forest Regressor**: Ensemble method, handles multiple features and non-linear patterns well
 **Use Case:** Predict future traffic patterns and customer movement trends
 """)

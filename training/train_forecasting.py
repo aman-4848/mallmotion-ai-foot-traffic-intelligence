@@ -1,6 +1,7 @@
 """
 Train Forecasting Models
-Trains ARIMA and Prophet forecasting models using processed data
+Trains ARIMA and Random Forest Regressor forecasting models using processed data
+Random Forest Regressor is more suitable for mall movement tracking with multiple features
 """
 import pandas as pd
 import numpy as np
@@ -9,6 +10,8 @@ import sys
 import joblib
 import json
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -104,40 +107,82 @@ def train_arima(ts_df):
         print(f"ARIMA training failed: {e}")
         return None, None, None
 
-def train_prophet(ts_df):
-    """Train Prophet model"""
+def train_random_forest_forecast(ts_df):
+    """Train Random Forest Regressor for forecasting - better for mall movement with multiple features"""
+    print("\nTraining Random Forest Regressor for Forecasting...")
+    
     try:
-        from prophet import Prophet
-        print("\nTraining Prophet...")
+        # Create time-based features
+        ts_df = ts_df.copy()
+        ts_df['ds'] = pd.to_datetime(ts_df['ds'])
+        ts_df['hour'] = ts_df['ds'].dt.hour
+        ts_df['day_of_week'] = ts_df['ds'].dt.dayofweek
+        ts_df['day_of_month'] = ts_df['ds'].dt.day
+        ts_df['month'] = ts_df['ds'].dt.month
+        ts_df['is_weekend'] = (ts_df['ds'].dt.dayofweek >= 5).astype(int)
+        
+        # Create lag features (previous values)
+        ts_df['y_lag1'] = ts_df['y'].shift(1)
+        ts_df['y_lag2'] = ts_df['y'].shift(2)
+        ts_df['y_lag7'] = ts_df['y'].shift(7)  # Weekly pattern
+        
+        # Rolling window features
+        ts_df['y_rolling_mean_7'] = ts_df['y'].rolling(window=7, min_periods=1).mean()
+        ts_df['y_rolling_std_7'] = ts_df['y'].rolling(window=7, min_periods=1).std()
+        
+        # Fill NaN values from lag features
+        ts_df = ts_df.bfill().fillna(0)
+        
+        # Prepare features
+        feature_cols = ['hour', 'day_of_week', 'day_of_month', 'month', 'is_weekend',
+                       'y_lag1', 'y_lag2', 'y_lag7', 'y_rolling_mean_7', 'y_rolling_std_7']
+        
+        X = ts_df[feature_cols].values
+        y = ts_df['y'].values
         
         # Split data
         train_size = int(len(ts_df) * 0.8)
-        train = ts_df[:train_size].copy()
-        test = ts_df[train_size:].copy()
+        X_train = X[:train_size]
+        X_test = X[train_size:]
+        y_train = y[:train_size]
+        y_test = y[train_size:]
         
-        # Fit Prophet model
-        model = Prophet()
-        model.fit(train)
+        # Scale features
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        
+        # Train Random Forest Regressor
+        model = RandomForestRegressor(
+            n_estimators=100,
+            max_depth=10,
+            random_state=42,
+            n_jobs=-1
+        )
+        model.fit(X_train_scaled, y_train)
         
         # Forecast
-        future = model.make_future_dataframe(periods=len(test))
-        forecast = model.predict(future)
-        
-        # Get forecasted values for test period
-        forecasted = forecast[-len(test):]['yhat'].values
-        actual = test['y'].values
+        y_pred = model.predict(X_test_scaled)
         
         # Calculate metrics
-        rmse = np.sqrt(mean_squared_error(actual, forecasted))
-        mae = mean_absolute_error(actual, forecasted)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        mae = mean_absolute_error(y_test, y_pred)
         
-        print(f"Prophet RMSE: {rmse:.4f}")
-        print(f"Prophet MAE: {mae:.4f}")
+        print(f"Random Forest Regressor RMSE: {rmse:.4f}")
+        print(f"Random Forest Regressor MAE: {mae:.4f}")
         
-        joblib.dump(model, MODEL_DIR / "prophet_model.pkl")
+        # Save model and scaler
+        joblib.dump(model, MODEL_DIR / "rf_forecast.pkl")
+        preprocessing_dir = MODEL_DIR.parent / "preprocessing"
+        preprocessing_dir.mkdir(parents=True, exist_ok=True)
+        joblib.dump(scaler, preprocessing_dir / "forecast_scaler.pkl")
+        joblib.dump(feature_cols, preprocessing_dir / "forecast_features.pkl")
+        
         return model, rmse, mae
     except Exception as e:
-        print(f"Prophet training failed: {e}")
+        print(f"Random Forest forecasting training failed: {e}")
+        import traceback
+        traceback.print_exc()
         return None, None, None
 
 def main():
@@ -161,11 +206,11 @@ def main():
             'mae': float(arima_mae)
         }
     
-    prophet_model, prophet_rmse, prophet_mae = train_prophet(ts_df)
-    if prophet_model is not None:
-        results['prophet'] = {
-            'rmse': float(prophet_rmse),
-            'mae': float(prophet_mae)
+    rf_forecast_model, rf_rmse, rf_mae = train_random_forest_forecast(ts_df)
+    if rf_forecast_model is not None:
+        results['random_forest_regressor'] = {
+            'rmse': float(rf_rmse),
+            'mae': float(rf_mae)
         }
     
     # Save results

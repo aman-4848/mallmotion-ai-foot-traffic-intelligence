@@ -38,7 +38,7 @@ all_accuracies = {
     'random_forest': results.get('random_forest', {}).get('accuracy', 0),
     'decision_tree': results.get('decision_tree', {}).get('accuracy', 0),
     'xgboost': results.get('xgboost', {}).get('accuracy', 0),
-    'svm': results.get('svm', {}).get('accuracy', 0)
+    'logistic_regression': results.get('logistic_regression', {}).get('accuracy', 0)
 }
 best_model = max(all_accuracies.items(), key=lambda x: x[1])[0]
 
@@ -69,14 +69,14 @@ with col3:
     if 'roc_auc' in results.get('xgboost', {}) and not pd.isna(results['xgboost'].get('roc_auc')):
         st.caption(f"ROC-AUC: {results['xgboost']['roc_auc']:.4f}")
 with col4:
-    badge = "🏆" if best_model == 'svm' else ""
+    badge = "🏆" if best_model == 'logistic_regression' else ""
     st.metric(
-        f"SVM {badge}",
-        f"{results.get('svm', {}).get('accuracy', 0)*100:.2f}%",
-        "Best Model" if best_model == 'svm' else ""
+        f"Logistic Regression {badge}",
+        f"{results.get('logistic_regression', {}).get('accuracy', 0)*100:.2f}%",
+        "Best Model" if best_model == 'logistic_regression' else ""
     )
-    if 'roc_auc' in results.get('svm', {}) and not pd.isna(results['svm'].get('roc_auc')):
-        st.caption(f"ROC-AUC: {results['svm']['roc_auc']:.4f}")
+    if 'roc_auc' in results.get('logistic_regression', {}) and not pd.isna(results['logistic_regression'].get('roc_auc')):
+        st.caption(f"ROC-AUC: {results['logistic_regression']['roc_auc']:.4f}")
 st.markdown("---")
 # Comparison Chart
 st.header("📈 Model Comparison")
@@ -96,9 +96,9 @@ if 'xgboost' in results:
     models.append('XGBoost')
     accuracies.append(results['xgboost']['accuracy'])
     colors.append('lightgreen')
-if 'svm' in results:
-    models.append('SVM')
-    accuracies.append(results['svm']['accuracy'])
+if 'logistic_regression' in results:
+    models.append('Logistic Regression')
+    accuracies.append(results['logistic_regression']['accuracy'])
     colors.append('purple')
 
 if models and accuracies:
@@ -146,12 +146,12 @@ if 'xgboost' in results:
         'ROC-AUC': results['xgboost'].get('roc_auc', 'N/A'),
         'Type': 'Gradient Boosting'
     })
-if 'svm' in results:
+if 'logistic_regression' in results:
     results_list.append({
-        'Model': 'SVM',
-        'Accuracy': results['svm']['accuracy'],
-        'ROC-AUC': results['svm'].get('roc_auc', 'N/A'),
-        'Type': 'Support Vector Machine'
+        'Model': 'Logistic Regression',
+        'Accuracy': results['logistic_regression']['accuracy'],
+        'ROC-AUC': results['logistic_regression'].get('roc_auc', 'N/A'),
+        'Type': 'Logistic Regression'
     })
 
 if results_list:
@@ -165,14 +165,14 @@ if results_list:
 st.markdown("---")
 # Feature Importance (if model available)
 st.header("🔍 Feature Importance")
-model_choice = st.selectbox("Select model for feature importance:", ["XGBoost", "Random Forest", "SVM"])
+model_choice = st.selectbox("Select model for feature importance:", ["XGBoost", "Random Forest", "Logistic Regression"])
 try:
     if model_choice == "XGBoost":
         model_path = models_dir / "classification" / "zone_xgb.pkl"
     elif model_choice == "Random Forest":
         model_path = models_dir / "classification" / "zone_rf.pkl"
-    else:  # SVM
-        model_path = models_dir / "classification" / "zone_svm.pkl"
+    else:  # Logistic Regression
+        model_path = models_dir / "classification" / "zone_lr.pkl"
     
     if model_path.exists():
         model = joblib.load(model_path)
@@ -221,9 +221,9 @@ try:
                     importances = model.feature_importances_[:len(numeric_cols)]
                 
                 importance_type = "Built-in Feature Importance"
-            elif model_choice == "SVM":
-                # SVM: Use permutation importance
-                with st.spinner("Calculating permutation importance for SVM (this may take a moment)..."):
+            elif model_choice == "Logistic Regression":
+                # Logistic Regression: Use permutation importance
+                with st.spinner("Calculating permutation importance for Logistic Regression (this may take a moment)..."):
                     # Use a smaller sample for permutation importance to speed it up
                     perm_importance = permutation_importance(
                         model, X_sample.values, y_sample, 
@@ -255,7 +255,7 @@ try:
             
             # Plot
             fig, ax = plt.subplots(figsize=(10, 8))
-            color = 'purple' if model_choice == 'SVM' else 'steelblue'
+            color = 'purple' if model_choice == 'Logistic Regression' else 'steelblue'
             ax.barh(range(len(importance_df)), importance_df['Importance'].values, 
                    color=color, alpha=0.8, edgecolor='black')
             ax.set_yticks(range(len(importance_df)))
@@ -283,7 +283,7 @@ st.info("""
 - **Random Forest**: Ensemble method using multiple decision trees
 - **Decision Tree**: Baseline model, easy to interpret
 - **XGBoost**: Gradient boosting algorithm, high performance
-- **SVM**: Support Vector Machine, good for complex boundaries
+- **Logistic Regression**: Linear model, fast and interpretable
 
 **Target:** Predicting next zone/location (SPACEID)
 **Best Model:** Check metrics above to see current best performer

@@ -1,0 +1,39 @@
+{
+  "generated": "2025-12-11 23:48:58",
+  "results": {
+    "classification": {
+      "random_forest": {
+        "accuracy": 0.9876893939393939,
+        "roc_auc": NaN
+      },
+      "decision_tree": {
+        "accuracy": 0.9936868686868687
+      },
+      "xgboost": {
+        "accuracy": 0.9965277777777778,
+        "roc_auc": NaN
+      },
+      "svm": {
+        "accuracy": 0.011047979797979798,
+        "roc_auc": NaN
+      }
+    },
+    "clustering": {
+      "kmeans": {
+        "n_clusters": 5,
+        "silhouette_score": 0.2575261042297855
+      },
+      "dbscan": {
+        "n_clusters": 396,
+        "silhouette_score": 0.17436370815726898,
+        "n_noise": 7157
+      }
+    },
+    "forecasting": {
+      "prophet": {
+        "rmse": 2244797154867.171,
+        "mae": 1944337315441.0571
+      }
+    }
+  }
+}

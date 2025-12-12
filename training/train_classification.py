@@ -12,7 +12,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
-from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score
 import os
 
@@ -162,38 +163,50 @@ def train_xgboost(X_train, y_train, X_test, y_test):
     joblib.dump(model, MODEL_DIR / "zone_xgb.pkl")
     return model, accuracy, roc_auc
 
-def train_svm(X_train, y_train, X_test, y_test):
-    """Train Support Vector Machine classifier"""
-    print("\nTraining SVM...")
-    # Use a subset for SVM if dataset is too large (SVM can be slow)
-    # For large datasets, use linear kernel, for smaller use RBF
-    if len(X_train) > 10000:
-        print("Large dataset detected, using linear kernel for faster training...")
-        model = SVC(kernel='linear', random_state=42, probability=True, max_iter=1000)
-    else:
-        model = SVC(kernel='rbf', random_state=42, probability=True, max_iter=1000)
+def train_logistic_regression(X_train, y_train, X_test, y_test):
+    """Train Logistic Regression classifier"""
+    print("\nTraining Logistic Regression...")
+    # Logistic Regression requires feature scaling for optimal performance
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
     
-    model.fit(X_train, y_train)
+    # Logistic Regression is faster and often performs well for classification
+    # Use multi_class='ovr' for multi-class problems
+    model = LogisticRegression(
+        random_state=42,
+        max_iter=1000,
+        multi_class='ovr',
+        n_jobs=-1,
+        solver='lbfgs'  # Good for multi-class problems
+    )
     
-    y_pred = model.predict(X_test)
+    model.fit(X_train_scaled, y_train)
+    
+    y_pred = model.predict(X_test_scaled)
     accuracy = accuracy_score(y_test, y_pred)
     
     # Calculate ROC-AUC (handle binary and multi-class)
     try:
         if len(np.unique(y_test)) > 2:
             # Multi-class: use one-vs-rest
-            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test), multi_class='ovr', average='macro')
+            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test_scaled), multi_class='ovr', average='macro')
         else:
             # Binary classification
-            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+            roc_auc = roc_auc_score(y_test, model.predict_proba(X_test_scaled)[:, 1])
     except Exception as e:
         print(f"Warning: Could not calculate ROC-AUC: {e}")
         roc_auc = np.nan
     
-    print(f"SVM Accuracy: {accuracy:.4f}")
-    print(f"SVM ROC-AUC: {roc_auc:.4f}")
+    print(f"Logistic Regression Accuracy: {accuracy:.4f}")
+    print(f"Logistic Regression ROC-AUC: {roc_auc:.4f}")
     
-    joblib.dump(model, MODEL_DIR / "zone_svm.pkl")
+    # Save model and scaler
+    joblib.dump(model, MODEL_DIR / "zone_lr.pkl")
+    preprocessing_dir = MODEL_DIR.parent / "preprocessing"
+    preprocessing_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(scaler, preprocessing_dir / "lr_scaler.pkl")
+    
     return model, accuracy, roc_auc
 
 def main():
@@ -222,8 +235,8 @@ def main():
     xgb_model, xgb_acc, xgb_auc = train_xgboost(X_train, y_train, X_test, y_test)
     results['xgboost'] = {'accuracy': float(xgb_acc), 'roc_auc': float(xgb_auc)}
     
-    svm_model, svm_acc, svm_auc = train_svm(X_train, y_train, X_test, y_test)
-    results['svm'] = {'accuracy': float(svm_acc), 'roc_auc': float(svm_auc)}
+    lr_model, lr_acc, lr_auc = train_logistic_regression(X_train, y_train, X_test, y_test)
+    results['logistic_regression'] = {'accuracy': float(lr_acc), 'roc_auc': float(lr_auc)}
     
     # Save results
     with open(RESULTS_DIR / "metrics.json", 'w') as f:
