@@ -50,6 +50,10 @@ data/processed/*.csv
 data/processed/*.xlsx
 data/processed/*.xls
 data/processed/~$*
+# Exception: Allow specific processed data files to be tracked
+!data/processed/engineered_features.csv
+!data/processed/merged data set.csv
+!data/processed/merged data set.xlsx
 data/sample/*.csv
 data/sample/*.xlsx
 !data/processed/.gitkeep
