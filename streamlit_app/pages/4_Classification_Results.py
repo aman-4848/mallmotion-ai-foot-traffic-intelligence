@@ -24,11 +24,27 @@ st.markdown("---")
 # Load results
 results_dir = Path(__file__).parent.parent.parent / "results"
 models_dir = Path(__file__).parent.parent.parent / "models"
-try:
-    with open(results_dir / "classification" / "metrics.json", 'r') as f:
-        results = json.load(f)
-except Exception as e:
-    st.error(f"Error loading results: {e}")
+
+results = None
+metrics_file = results_dir / "classification" / "metrics.json"
+if metrics_file.exists():
+    try:
+        with open(metrics_file, 'r') as f:
+            results = json.load(f)
+    except Exception as e:
+        st.error(f"Error loading results: {e}")
+        results = None
+else:
+    st.warning("⚠️ Results file not found. Please run model training first.")
+    st.info("💡 Run: `python training/train_classification.py` to generate results.")
+    results = {
+        'random_forest': {'accuracy': 0},
+        'decision_tree': {'accuracy': 0},
+        'xgboost': {'accuracy': 0},
+        'logistic_regression': {'accuracy': 0}
+    }
+
+if results is None:
     st.stop()
 # Model Performance Metrics
 st.header("📊 Model Performance Metrics")

@@ -22,11 +22,25 @@ st.markdown("---")
 # Load results
 results_dir = Path(__file__).parent.parent.parent / "results"
 models_dir = Path(__file__).parent.parent.parent / "models"
-try:
-    with open(results_dir / "clustering" / "silhouette_score.json", 'r') as f:
-        results = json.load(f)
-except Exception as e:
-    st.error(f"Error loading results: {e}")
+
+results = None
+clustering_file = results_dir / "clustering" / "silhouette_score.json"
+if clustering_file.exists():
+    try:
+        with open(clustering_file, 'r') as f:
+            results = json.load(f)
+    except Exception as e:
+        st.error(f"Error loading results: {e}")
+        results = None
+else:
+    st.warning("⚠️ Results file not found. Please run model training first.")
+    st.info("💡 Run: `python training/train_clustering.py` to generate results.")
+    results = {
+        'kmeans': {'n_clusters': 0, 'silhouette_score': 0},
+        'dbscan': {'n_clusters': 0, 'silhouette_score': 0, 'n_noise': 0}
+    }
+
+if results is None:
     st.stop()
 # Clustering Metrics
 st.header("📊 Clustering Performance")

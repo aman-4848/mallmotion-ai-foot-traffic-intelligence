@@ -1,0 +1,18 @@
+{
+  "random_forest": {
+    "accuracy": 0.9876893939393939,
+    "roc_auc": null
+  },
+  "decision_tree": {
+    "accuracy": 0.9936868686868687,
+    "roc_auc": null
+  },
+  "xgboost": {
+    "accuracy": 0.9965277777777778,
+    "roc_auc": null
+  },
+  "logistic_regression": {
+    "accuracy": 0.2986111111111111,
+    "roc_auc": null
+  }
+}

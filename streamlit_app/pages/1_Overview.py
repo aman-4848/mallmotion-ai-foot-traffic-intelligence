@@ -41,33 +41,55 @@ try:
     results_dir = Path(__file__).parent.parent.parent / "results"
     
     # Classification metrics
-    with open(results_dir / "classification" / "metrics.json", 'r') as f:
-        cls_results = json.load(f)
-    
-    with col1:
-        st.metric(
-            "🏆 Best Classification",
-            f"{cls_results['xgboost']['accuracy']*100:.2f}%",
-            "XGBoost"
-        )
+    cls_results = None
+    metrics_file = results_dir / "classification" / "metrics.json"
+    if metrics_file.exists():
+        with open(metrics_file, 'r') as f:
+            cls_results = json.load(f)
     
     # Clustering metrics
-    with open(results_dir / "clustering" / "silhouette_score.json", 'r') as f:
-        clust_results = json.load(f)
+    clust_results = None
+    clustering_file = results_dir / "clustering" / "silhouette_score.json"
+    if clustering_file.exists():
+        with open(clustering_file, 'r') as f:
+            clust_results = json.load(f)
     
-    with col2:
-        st.metric(
-            "👥 Best Clustering",
-            f"{clust_results['kmeans']['silhouette_score']:.3f}",
-            "K-Means Silhouette"
-        )
+    if cls_results:
+        with col1:
+            best_acc = max(
+                cls_results.get('random_forest', {}).get('accuracy', 0),
+                cls_results.get('decision_tree', {}).get('accuracy', 0),
+                cls_results.get('xgboost', {}).get('accuracy', 0),
+                cls_results.get('logistic_regression', {}).get('accuracy', 0)
+            )
+            st.metric(
+                "🏆 Best Classification",
+                f"{best_acc*100:.2f}%",
+                "Accuracy"
+            )
+    else:
+        with col1:
+            st.metric("🏆 Best Classification", "N/A", "Results not available")
     
-    with col3:
-        st.metric(
-            "📈 Clusters Found",
-            f"{clust_results['kmeans']['n_clusters']}",
-            "Customer Segments"
-        )
+    if clust_results:
+        with col2:
+            st.metric(
+                "👥 Best Clustering",
+                f"{clust_results['kmeans']['silhouette_score']:.3f}",
+                "K-Means Silhouette"
+            )
+        
+        with col3:
+            st.metric(
+                "📈 Clusters Found",
+                f"{clust_results['kmeans']['n_clusters']}",
+                "Customer Segments"
+            )
+    else:
+        with col2:
+            st.metric("👥 Best Clustering", "N/A", "Results not available")
+        with col3:
+            st.metric("📈 Clusters Found", "N/A", "Results not available")
     
     with col4:
         st.metric(
@@ -77,6 +99,13 @@ try:
         )
 except Exception as e:
     st.warning(f"Could not load all metrics: {e}")
+    # Show placeholder metrics
+    with col1:
+        st.metric("🏆 Best Classification", "N/A", "Loading...")
+    with col2:
+        st.metric("👥 Best Clustering", "N/A", "Loading...")
+    with col3:
+        st.metric("📈 Clusters Found", "N/A", "Loading...")
 
 st.markdown("---")
 

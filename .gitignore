@@ -74,6 +74,10 @@ results/**/*.pdf
 results/**/*.json
 results/**/*.csv
 results/**/*.txt
+# Exception: Allow essential JSON metrics files for deployment
+!results/classification/metrics.json
+!results/clustering/silhouette_score.json
+!results/forecasting/rmse.json
 !results/README.md
 
 # Logs
