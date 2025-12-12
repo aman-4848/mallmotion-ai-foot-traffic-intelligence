@@ -26,7 +26,7 @@ model_choice = st.selectbox(
 # Map selection to file
 model_files = {
     "XGBoost (Best)": "zone_xgb.pkl",
-    "Random Forest": "zone_rf.pkl",
+    # "Random Forest": "zone_rf.pkl",  # Excluded: 402MB exceeds GitHub's 100MB limit
     "Decision Tree": "baseline_dt.pkl",
     "Logistic Regression": "zone_lr.pkl"
 }
