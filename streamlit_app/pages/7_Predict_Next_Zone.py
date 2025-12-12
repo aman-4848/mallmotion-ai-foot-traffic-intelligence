@@ -20,7 +20,8 @@ models_dir = Path(__file__).parent.parent.parent / "models"
 st.header("🤖 Select Model")
 model_choice = st.selectbox(
     "Choose classification model:",
-    ["XGBoost (Best)", "Random Forest", "Decision Tree", "Logistic Regression"]
+    ["XGBoost (Best)", "Decision Tree", "Logistic Regression"]
+    # Note: Random Forest (402MB) excluded due to GitHub file size limits
 )
 # Map selection to file
 model_files = {
@@ -31,7 +32,29 @@ model_files = {
 }
 model_path = models_dir / "classification" / model_files[model_choice]
 if not model_path.exists():
-    st.error(f"Model file not found: {model_path}")
+    st.error(f"⚠️ Model file not found: {model_path}")
+    st.warning(f"**Expected location:** `{model_path}`")
+    st.info("""
+    **To fix this issue:**
+    1. Ensure model files are trained and saved in the `models/` directory
+    2. Run: `python training/train_classification.py` to generate models
+    3. Check that the model file exists at the expected path
+    
+    **Note:** If deploying, ensure model files are committed to git repository.
+    """)
+    
+    # Show available models
+    st.subheader("📋 Available Models")
+    classification_dir = models_dir / "classification"
+    if classification_dir.exists():
+        available = [f.name for f in classification_dir.glob("*.pkl")]
+        if available:
+            st.success(f"✅ Found {len(available)} model file(s) in classification directory")
+            st.code("\n".join(available))
+        else:
+            st.warning("❌ No model files found in classification directory")
+    else:
+        st.warning("❌ Classification models directory does not exist")
     st.stop()
 # Load model and scaler (if needed for Logistic Regression)
 try:

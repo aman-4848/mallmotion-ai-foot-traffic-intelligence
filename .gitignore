@@ -63,6 +63,21 @@ data/sample/*.xlsx
 models/**/*.pkl
 models/**/*.h5
 models/**/*.joblib
+# Exception: Allow essential model files for deployment
+!models/classification/zone_xgb.pkl
+# Note: zone_rf.pkl (402MB) exceeds GitHub's 100MB limit - excluded
+# !models/classification/zone_rf.pkl
+!models/classification/baseline_dt.pkl
+!models/classification/zone_lr.pkl
+!models/clustering/kmeans.pkl
+!models/clustering/dbscan.pkl
+!models/forecasting/rf_forecast.pkl
+!models/forecasting/arima.pkl
+!models/preprocessing/encoder.pkl
+!models/preprocessing/scaler.pkl
+!models/preprocessing/lr_scaler.pkl
+!models/preprocessing/forecast_scaler.pkl
+!models/preprocessing/forecast_features.pkl
 !models/__init__.py
 !models/load_model.py
 !models/model_registry.json

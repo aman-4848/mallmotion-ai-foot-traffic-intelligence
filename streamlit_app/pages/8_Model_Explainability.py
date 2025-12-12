@@ -21,7 +21,8 @@ st.title("🧠 Model Explainability")
 st.markdown("---")
 models_dir = Path(__file__).parent.parent.parent / "models"
 st.header("🔍 Feature Importance Analysis")
-model_choice = st.selectbox("Select model:", ["XGBoost", "Random Forest", "Decision Tree", "Logistic Regression"])
+model_choice = st.selectbox("Select model:", ["XGBoost", "Decision Tree", "Logistic Regression"])
+# Note: Random Forest (402MB) excluded due to GitHub file size limits
 # Map to file
 model_files = {
     "XGBoost": "zone_xgb.pkl",
@@ -163,7 +164,29 @@ if model_path.exists():
         with st.expander("Error Details"):
             st.code(traceback.format_exc())
 else:
-    st.error("Model file not found.")
+    st.error("⚠️ Model file not found.")
+    st.warning(f"**Expected location:** `{model_path}`")
+    st.info("""
+    **To fix this issue:**
+    1. Ensure model files are trained and saved in the `models/` directory
+    2. Run: `python training/train_classification.py` to generate models
+    3. Check that the model file exists at the expected path
+    
+    **Note:** If deploying, ensure model files are committed to git repository.
+    """)
+    
+    # Show available models
+    st.subheader("📋 Available Models")
+    classification_dir = models_dir / "classification"
+    if classification_dir.exists():
+        available = [f.name for f in classification_dir.glob("*.pkl")]
+        if available:
+            st.success(f"✅ Found {len(available)} model file(s) in classification directory")
+            st.code("\n".join(available))
+        else:
+            st.warning("❌ No model files found in classification directory")
+    else:
+        st.warning("❌ Classification models directory does not exist")
 st.markdown("---")
 # Model Comparison
 st.header("📊 Model Comparison")
