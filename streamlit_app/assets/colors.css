@@ -1,0 +1,81 @@
+/* Custom Color Scheme for Streamlit Dashboard */
+
+:root {
+    --primary-color: #1f77b4;
+    --secondary-color: #2c3e50;
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --error-color: #f44336;
+    --info-color: #2196f3;
+    --background-color: #f8f9fa;
+    --sidebar-bg: #ffffff;
+    --text-color: #2c3e50;
+    --border-color: #e0e0e0;
+}
+
+/* Main background */
+.main {
+    background-color: var(--background-color);
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+}
+
+/* Headers */
+h1 {
+    color: var(--primary-color);
+    border-bottom: 3px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+h2 {
+    color: var(--secondary-color);
+    margin-top: 30px;
+}
+
+h3 {
+    color: #34495e;
+}
+
+/* Metrics */
+[data-testid="stMetricValue"] {
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+/* Buttons */
+.stButton>button {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 5px;
+    border: none;
+}
+
+.stButton>button:hover {
+    background-color: #1565c0;
+}
+
+/* Info boxes */
+.stInfo {
+    background-color: #e3f2fd;
+    border-left: 4px solid var(--info-color);
+}
+
+.stSuccess {
+    background-color: #e8f5e9;
+    border-left: 4px solid var(--success-color);
+}
+
+.stWarning {
+    background-color: #fff3e0;
+    border-left: 4px solid var(--warning-color);
+}
+
+.stError {
+    background-color: #ffebee;
+    border-left: 4px solid var(--error-color);
+}
+
